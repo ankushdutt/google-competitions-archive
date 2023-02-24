@@ -152,60 +152,6 @@ async function codejamio() {
   await browser.close();
 }
 
-async function hashcode() {
-  const browser = await puppeteer.launch({ headless: true });
-  const page = await browser.newPage();
-
-  for (let year = 2021; year <= 2022; year++) {
-    const link =
-      "https://codingcompetitions.withgoogle.com/hashcode/archive/" +
-      year.toString();
-
-    await page.goto(link);
-
-    await page.setViewport({ width: 1080, height: 1024 });
-
-    await page.waitForSelector(
-      ".schedule-row-action.schedule-row-action__push.schedule-row-action__mobile"
-    );
-
-    let s = await page.$$eval(
-      ".schedule-row-action.schedule-row-action__push.schedule-row-action__mobile",
-      (e) => e.map((el) => el.pathname)
-    );
-
-    let n = await page.$$eval(".schedule-row-cell > span", (e) =>
-      e.map((el) => el.innerText)
-    );
-
-    let i = 1;
-
-    s.forEach(async (e) => {
-      const slug = e.split("/")[3];
-
-      fs.mkdirSync(
-        `./hashcode/${year.toString()}`,
-        { recursive: true },
-        (err) => {
-          if (err) throw err;
-        }
-      );
-
-      var writeStream = fs.createWriteStream(
-        `./hashcode/${year.toString()}/${n[i++]}.json`
-      );
-
-      await fetch(`https://codejam.googleapis.com/dashboard/${slug}/poll?p=e30`)
-        .then((response) => response.text())
-        .then((data) => {
-          writeStream.write(Buffer.from(data, "base64"));
-        });
-      writeStream.end();
-    });
-  }
-  await browser.close();
-}
-
 const downloadFile = async (url, path) => {
   const response = await fetch(url);
   if (!response.ok) {
@@ -219,7 +165,7 @@ const downloadFile = async (url, path) => {
   });
 };
 
-async function hashcodefiles() {
+async function hashcode() {
   const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
 
@@ -279,7 +225,7 @@ async function hashcodefiles() {
       );
 
       if (year >= 2021) {
-        // download datasets only since problem is already present in html
+        // download datasets only since problem is already present in json
         await p.waitForSelector(".test-data-download-content");
 
         const dataSets = await p.$eval(
@@ -293,6 +239,20 @@ async function hashcodefiles() {
           dataSets,
           `./hashcode/${year.toString()}/${n[i]}/Data Sets.zip`
         );
+
+        // fetch json
+        const writeStream = fs.createWriteStream(
+          `./hashcode/${year.toString()}/${n[i]}/${n[i]}.json`
+        );
+
+        await fetch(
+          `https://codejam.googleapis.com/dashboard/${slug}/poll?p=e30`
+        )
+          .then((response) => response.text())
+          .then((data) => {
+            writeStream.write(Buffer.from(data, "base64"));
+          });
+        writeStream.end();
       } else {
         // wait for Problem Statement link to appear
         await p.waitForSelector("p > ul > li > a");
@@ -328,4 +288,3 @@ codejam();
 kickstart();
 hashcode();
 codejamio();
-hashcodefiles();
