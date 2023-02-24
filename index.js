@@ -206,11 +206,24 @@ async function hashcode() {
   await browser.close();
 }
 
-async function hashcodepdf() {
-  const browser = await puppeteer.launch({ headless: false });
+const downloadFile = async (url, path) => {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(
+      `Failed to download file: ${response.status} ${response.statusText}`
+    );
+  }
+  const fileStream = fs.createWriteStream(path);
+  await new Promise((resolve, reject) => {
+    response.body.pipe(fileStream).on("finish", resolve).on("error", reject);
+  });
+};
+
+async function hashcodefiles() {
+  const browser = await puppeteer.launch({ headless: true });
   const page = await browser.newPage();
 
-  for (let year = 2014; year <= 2020; year++) {
+  for (let year = 2014; year <= 2022; year++) {
     let s, n;
     if (year == 2014) {
       s = ["/hashcode/round/0000000000c617e8"];
@@ -257,21 +270,6 @@ async function hashcodepdf() {
       // click on Open problem
       await p.click("a.problems-nav-problem-link");
 
-      // wait for Problem Statement link to appear
-      await p.waitForSelector("p > ul > li > a");
-
-      const problemStatement = await p.$eval(
-        "p > ul",
-        (e) => e.children[0].children[0].href
-      );
-
-      const dataSets = await p.$eval(
-        "p > ul",
-        (e) => e.children[1].children[0].href
-      );
-
-      await p.close();
-
       fs.mkdirSync(
         `./hashcode/${year.toString()}/${n[i]}`,
         { recursive: true },
@@ -280,47 +278,54 @@ async function hashcodepdf() {
         }
       );
 
-      const response = await fetch(problemStatement);
-      if (!response.ok) {
-        throw new Error(
-          `Failed to download file: ${response.status} ${response.statusText}`
+      if (year >= 2021) {
+        // download datasets only since problem is already present in html
+        await p.waitForSelector(".test-data-download-content");
+
+        const dataSets = await p.$eval(
+          ".test-data-download-content",
+          (e) => e.children[0].href
+        );
+
+        await p.close();
+
+        downloadFile(
+          dataSets,
+          `./hashcode/${year.toString()}/${n[i]}/Data Sets.zip`
+        );
+      } else {
+        // wait for Problem Statement link to appear
+        await p.waitForSelector("p > ul > li > a");
+
+        const problemStatement = await p.$eval(
+          "p > ul",
+          (e) => e.children[0].children[0].href
+        );
+
+        const dataSets = await p.$eval(
+          "p > ul",
+          (e) => e.children[1].children[0].href
+        );
+
+        await p.close();
+
+        downloadFile(
+          problemStatement,
+          `./hashcode/${year.toString()}/${n[i]}/Problem Statement.pdf`
+        );
+        downloadFile(
+          dataSets,
+          `./hashcode/${year.toString()}/${n[i]}/Data Sets.zip`
         );
       }
-      const writeStream = fs.createWriteStream(
-        `./hashcode/${year.toString()}/${n[i]}/Problem Statement.pdf`
-      );
-
-      await new Promise((resolve, reject) => {
-        response.body
-          .pipe(writeStream)
-          .on("finish", resolve)
-          .on("error", reject);
-      });
-
-      const response2 = await fetch(dataSets);
-      if (!response2.ok) {
-        throw new Error(
-          `Failed to download file: ${response2.status} ${response2.statusText}`
-        );
-      }
-      const writeStream2 = fs.createWriteStream(
-        `./hashcode/${year.toString()}/${n[i]}/Data Sets.zip`
-      );
-
-      await new Promise((resolve, reject) => {
-        response2.body
-          .pipe(writeStream2)
-          .on("finish", resolve)
-          .on("error", reject);
-      });
       i++;
     }
   }
   await browser.close();
 }
 
-// codejam();
-// kickstart();
-// hashcode();
-// codejamio();
-hashcodepdf();
+codejam();
+kickstart();
+hashcode();
+codejamio();
+hashcodefiles();
