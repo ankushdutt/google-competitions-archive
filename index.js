@@ -51,6 +51,33 @@ async function codejam() {
           writeStream.write(Buffer.from(data, "base64"));
         });
       writeStream.end();
+
+      // download test cases
+      const p = await browser.newPage();
+
+      // goto codejam's round page
+      await p.goto(
+        `https://codingcompetitions.withgoogle.com/codejam/round/${slug}`
+      );
+
+      // wait for open problem link to appear
+      await p.waitForSelector("a.problems-nav-problem-link");
+
+      let problems = await page.$$eval(
+        ".schedule-row-action.schedule-row-action__push.schedule-row-action__mobile",
+        (e) => e.map((el) => el.pathname)
+      );
+
+      let promises = problems.map(async (problem) => {
+        const problemPage = await browser.newPage();
+        // await problemPage
+      });
+
+      // click on Open problem
+      await p.click("a.problems-nav-problem-link");
+
+      // test cases are available if class i.material-icons.grey is present
+      // Case 1: test cases are present
     });
   }
   await browser.close();
@@ -125,10 +152,10 @@ async function codejamio() {
     e.map((el) => el.pathname)
   );
 
-  let n = await page.$$eval(
-    ".mdc-layout-grid__cell--span-4-tablet > a > div > div.card-body > div:nth-child(1) > p:nth-child(1)",
-    (e) => e.map((el) => el.innerText)
-  );
+  // let n = await page.$$eval(
+  //   ".mdc-layout-grid__cell--span-4-tablet > a > div > div.card-body > div:nth-child(1) > p:nth-child(1)",
+  //   (e) => e.map((el) => el.innerText)
+  // );
 
   let year = 2022;
 
@@ -139,7 +166,7 @@ async function codejamio() {
       if (err) throw err;
     });
 
-    var writeStream = fs.createWriteStream(`./codejamio/${year}.json`);
+    const writeStream = fs.createWriteStream(`./codejamio/${year}.json`);
     year--;
     await fetch(`https://codejam.googleapis.com/dashboard/${slug}/poll?p=e30`)
       .then((response) => response.text())
